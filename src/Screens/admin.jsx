@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getCategories } from '../Service/categoriesService';
 
 const AdminDashboard = () => {
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'Roman Shades', description: 'Elegant fabric shades' },
-    { id: 2, name: 'Zebra Blinds', description: 'Dual-layer blinds' },
-    { id: 3, name: 'Roller Shades', description: 'Modern and sleek shades' }
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [categoryForm, setCategoryForm] = useState({
     name: '',
@@ -27,6 +26,28 @@ const AdminDashboard = () => {
   });
 
   const [showNewCategorySection, setShowNewCategorySection] = useState(false);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const result = await getCategories();
+        if (result.ok && result.success) {
+          setCategories(result.categories || []);
+        } else {
+          setError("Failed to load categories");
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+        setError("An unexpected error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
+
+  if (loading) return <p>Loading categories...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   // Category Form Handlers
   const handleCategoryChange = (e) => {
@@ -575,7 +596,7 @@ const AdminDashboard = () => {
               >
                 <option value="">Select a category</option>
                 {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.categoryId} value={cat.categoryId}>{cat.categoryName}</option>
                 ))}
                 <option value="new">+ New Category</option>
               </select>
@@ -783,7 +804,7 @@ const AdminDashboard = () => {
           gap: '1.5rem'
         }}>
           {categories.map(cat => (
-            <div key={cat.id} style={{
+            <div key={cat.categoryId} style={{
               padding: '1.5rem',
               background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
               borderRadius: '15px',
@@ -803,12 +824,12 @@ const AdminDashboard = () => {
                 fontWeight: 600,
                 color: '#333',
                 marginBottom: '0.5rem'
-              }}>{cat.name}</h3>
+              }}>{cat.categoryName}</h3>
               <p style={{
                 fontSize: '0.9rem',
                 color: '#666',
                 lineHeight: 1.5
-              }}>{cat.description}</p>
+              }}>{cat.categorySubText}</p>
             </div>
           ))}
         </div>
