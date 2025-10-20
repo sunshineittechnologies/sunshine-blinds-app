@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getCategories } from '../Service/categoriesService';
+import { getCategories, createCategory, uploadCategoryImages } from '../Service/categoriesService';
 
 const AdminDashboard = () => {
   const [categories, setCategories] = useState([]);
@@ -8,6 +8,7 @@ const AdminDashboard = () => {
 
   const [categoryForm, setCategoryForm] = useState({
     name: '',
+    subtext: '',
     description: '',
     images: []
   });
@@ -66,20 +67,41 @@ const AdminDashboard = () => {
     setCategoryForm({ ...categoryForm, images: newImages });
   };
 
-  const handleCategorySubmit = () => {
-    if (!categoryForm.name || !categoryForm.description) {
+  const handleCategorySubmit = async () => {
+    if (!categoryForm.name || !categoryForm.description || !categoryForm.subtext) {
       alert('Please fill in all required fields');
       return;
     }
     const newCategory = {
-      id: categories.length + 1,
-      name: categoryForm.name,
-      description: categoryForm.description,
-      images: categoryForm.images
+      categoryName: categoryForm.name,
+      categorySubText: categoryForm.subtext,
+      categoryDescription: categoryForm.description,
     };
     setCategories([...categories, newCategory]);
-    alert(`Category "${categoryForm.name}" added successfully!`);
-    setCategoryForm({ name: '', description: '', images: [] });
+    try {
+      const result = await createCategory(newCategory);
+      if(result.ok && result.success) {
+        const savedCategory = result.category;
+        if(categoryForm.images.length > 0 && savedCategory.presignedUrl != null && savedCategory.imageUploadStatus === 'pending') {
+          const uploadResult = await uploadCategoryImages(categoryForm.images, savedCategory.presignedUrl);
+          if(uploadResult.length != categoryForm.images.length)
+            alert('Something went wrong while uploading images.');
+          else {
+            if(uploadResult.includes(false))
+              alert('Not all images saved successfully.');
+            else
+              alert('Images saved successfully.');
+
+            
+          }
+        }
+        alert(`Category "${savedCategory.categoryName}" added successfully!`);
+      }
+    } catch (err) {
+        console.error("Error creating category:", err);
+        setError("An unexpected error occurred");
+    }
+    setCategoryForm({ name: '', subtext: '', description: '', images: [] });
   };
 
   // Product Form Handlers
@@ -235,6 +257,32 @@ const AdminDashboard = () => {
                 value={categoryForm.name}
                 onChange={handleCategoryChange}
                 placeholder="e.g., Roman Shades"
+                style={{
+                  width: '100%',
+                  padding: '0.9rem 1.2rem',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  transition: 'all 0.3s ease',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                color: '#333',
+                fontWeight: 600,
+                fontSize: '0.95rem'
+              }}>Category Subtext *</label>
+              <input
+                type="text"
+                name="subtext"
+                value={categoryForm.subtext}
+                onChange={handleCategoryChange}
+                placeholder="e.g., Motorized Blinds"
                 style={{
                   width: '100%',
                   padding: '0.9rem 1.2rem',
